@@ -28,10 +28,16 @@ const lightbox = new BCLightboxModal('my-modal-id', '[data-my-lightbox]');
 Finally, add the appropriate data attribute to your links:
 ```html
 <a href="https://www.youtube.com/watch?v=example" data-bc-lightbox>Watch Video</a>
+
+<!-- or for AblePlayer embed -->
+ <a href="https://vimeo.com/example" data-bc-lightbox data-bc-lightbox-ableplayer>Watch Video with AblePlayer</a>
 ``` 
 
 ## Requirements
 - Bootstrap 5.x CSS and JS must be included in your project for the modal functionality to work.
+- AblePlayer features:
+  - To use AblePlayer as an embed option, AblePlayer's CSS and JS must also be included in your project.
+  - If you would like to include Vimeo videos in AblePlayer embeds, you must also include the Vimeo Player API script.
 
 ## Notes on the build process
 This library uses [@wordpress/scripts](https://www.npmjs.com/package/@wordpress/scripts) for the build process. The source code is located in the `src` directory, and the built files are output to the `build` directory. You can run the following commands:

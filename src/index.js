@@ -45,8 +45,8 @@ class BCLightboxModal {
 					</button>
 					<div class="modal-dialog modal-lg modal-dialog-centered">
 						<div class="modal-content">
-							<div class="modal-body p-0 bg-black" id="${this.modalBodyId}">
-								<div class="ratio ratio-16x9">${BCLightboxModal.loadingHtml}</div>
+							<div class="modal-body p-0 bg-dark" id="${this.modalBodyId}">
+								${BCLightboxModal.loadingHtml}
 							</div>
 						</div>
 					</div>
@@ -98,29 +98,49 @@ class BCLightboxModal {
 						// Get the URL from the triggering link (what the user clicked)
 						const trigger = event.relatedTarget;
 						const videoUrl = trigger.getAttribute('data-bc-lightbox-url');
+						const useAbleplayer = trigger.getAttribute('data-bc-lightbox-ableplayer') === 'true' ? true : false;
 
 						// Get the element to insert the embed HTML into
 						const modalBody = document.getElementById(this.modalBodyId);
-						const ratioWrapper = modalBody.querySelector('.ratio');
 
-						// Fetch the embed HTML and insert it into the modal
-						BCLightboxModal.getOembedHTML(videoUrl).then( (html) => {
-							if ( html ) {
-								ratioWrapper.innerHTML = html;
+						if ( useAbleplayer ) {
+							let embedHtml = BCLightboxModal.getAbleplayerEmbedHtml(videoUrl);
+							modalBody.innerHTML = embedHtml;
+							console.log('embedHtml:', embedHtml);
+							// Initialize AblePlayer on the new video element
+							if ( typeof AblePlayer !== 'undefined' ) {
+								new AblePlayer( document.getElementById('ableplayer-modal-video'), {
+									autoplay: true,
+									playsinline: true,
+									showToggleCaptionsButton: true,
+									showCaptionsMenuButton: true,
+									captionType: 'html',
+									// Add other AblePlayer options as needed
+								});
+							} else {
+								console.error('AblePlayer is not loaded.');
+								modalBody.innerHTML = `<p class="text-center alert alert-warning">Sorry, this video cannot be played at this time. <a href="${videoUrl}" target="_blank" rel="noopener">Open in a New Window.</a></p>`;
 							}
-						}).catch( (error) => {
-							// Handle errors gracefully
-							console.error('Unable to fetch video embed html:', error);
-							ratioWrapper.innerHTML = `<p class="text-center alert alert-warning">Sorry, this video cannot be played at this time. <a href="${videoUrl}" target="_blank" rel="noopener">Open in a New Window.</a></p>`;
-						});
+						} else {
+							// Fetch the embed HTML and insert it into the modal
+							BCLightboxModal.getOembedData(videoUrl).then( (data) => {
+								if ( data.html ) {
+									// If AblePlayer is requested, modify the embed HTML accordingly
+									modalBody.innerHTML = `<div class="ratio ratio ratio-16x9">${data.html}</div>`;
+								}
+							}).catch( (error) => {
+								// Handle errors gracefully
+								console.error('Unable to fetch video embed html:', error);
+								modalBody.innerHTML = `<p class="text-center alert alert-warning">Sorry, this video cannot be played at this time. <a href="${videoUrl}" target="_blank" rel="noopener">Open in a New Window.</a></p>`;
+							});
+						}
 					});
 
 					// Clear out content when modal is closed
 					modalContainer.addEventListener('hidden.bs.modal', (event) => {
 						const modalBody = document.getElementById('bc-lightbox-modal-body');
-						const ratioWrapper = modalBody.querySelector('.ratio');
 						// Clear out existing content
-						ratioWrapper.innerHTML = BCLightboxModal.loadingHtml;
+						modalBody.innerHTML = BCLightboxModal.loadingHtml;
 					});
 				}
 			}
@@ -129,12 +149,12 @@ class BCLightboxModal {
 	}
 
 	/**
-	 * Fetch oEmbed HTML for a given video URL (YouTube or Vimeo).
+	 * Get oEmbed Data for a given video URL (YouTube or Vimeo).
 	 *
 	 * @param {string} url - The video URL.
-	 * @returns {Promise<string|null>} - Returns the embed HTML or null if not found/error.
+	 * @returns {Promise<Object|null>} - Returns the oEmbed data or null if not found/error.
 	 */
-	static async getOembedHTML( url ) {
+	static async getOembedData( url ) {
 		try {
 
 			// Determine if the URL is YouTube or Vimeo and fetch the oEmbed data
@@ -148,16 +168,47 @@ class BCLightboxModal {
 				// Modify embed HTML to include autoplay and nocookie domain
 				let embedHtml = data.html.replace('feature=oembed', 'feature=oembed&autoplay=1&enablejsapi=1&rel=0');
 				embedHtml = embedHtml.replace('www.youtube.com', 'www.youtube-nocookie.com');
-				return embedHtml || null;
+				data.html = embedHtml;
+				return data || null;
 			} else if ( url.includes('vimeo.com') ) {
 				const response = await fetch('https://vimeo.com/api/oembed.json?url=' + encodeURIComponent(url) +'&autoplay=1' );
 				if (!response.ok) throw new Error('Network response was not ok');
 				const data = await response.json();
-				return data.html || null;
+				return data || null;
 			}
 		} catch (error) {
 			throw(error);
 		}
+	}
+
+	/**
+	 * Modify the embed HTML to use AblePlayer for accessibility.
+	 *
+	 * @param {Object} oembedData - The oEmbed data containing the original embed HTML.
+	 * @returns {string} - The modified embed HTML for AblePlayer.
+	 */
+	static getAbleplayerEmbedHtml( videoUrl ) {
+		if ( !videoUrl ) return '';
+
+		// Determine if the URL is YouTube or Vimeo and set data attributes accordingly
+		let videoDataTag = '';
+		if ( videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') ) {
+			videoDataTag = `data-youtube-nocookie="true" data-youtube-id="${videoUrl}"`;
+		} else if ( videoUrl.includes('vimeo.com') ) {
+			//Vimeo prefers just the numeric ID
+			const vimeoIdMatch = videoUrl.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+			const vimeoId = vimeoIdMatch ? vimeoIdMatch[1] : '';
+			videoDataTag = `data-vimeo-id="${vimeoId}"`;
+		} else {
+			return `<p class="text-center alert alert-warning">Sorry, this video format is not supported. <a href="${videoUrl}" target="_blank" rel="noopener">Open in a New Window.</a></p>`;
+		}
+
+		// Return the AblePlayer embed HTML
+		const embedHtml = `
+			<div class="mx-2"><video id="ableplayer-modal-video" data-able-player autoplay preload="auto" ${videoDataTag} playsinline></video></div>
+		`
+		console.log('embedHtml:', embedHtml);
+		return embedHtml;
 	}
 }
 
