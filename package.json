@@ -1,6 +1,6 @@
 {
   "name": "bc-lightbox-modal",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Small JavaScript library to allow Bootstrap 5.x Modals to be used as Lightboxes for YouTube and Vimeo videos",
   "homepage": "https://github.com/BellevueCollege/bc-lightbox-modal#readme",
   "bugs": {
