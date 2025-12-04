@@ -1,10 +1,17 @@
-import { Modal } from 'bootstrap'
-
 class BCLightboxModal {
 	static modalId = 'bc-lightbox-modal';
 	static loadingHtml = '<p class="text-center">Loading...</p>';
+	static bootstrap;
 
-	constructor( modalId = BCLightboxModal.modalId, dataAttribute = '[data-bc-lightbox]' ) {
+	/**
+	 * Constructor for the BCLightboxModal class.
+	 *
+	 * @param {Object} bootstrap - The Bootstrap object containing the Modal class.
+	 * @param {string} modalId - The ID of the modal element.
+	 * @param {string} dataAttribute - The data attribute to use for triggering the lightbox.
+	 */
+	constructor( bootstrap, modalId = BCLightboxModal.modalId, dataAttribute = '[data-bc-lightbox]' ) {
+		this.bootstrap = bootstrap;
 		this.modalId = modalId;
 		this.dataAttribute = dataAttribute;
 		this.modalBodyId = `${this.modalId}-body`;
@@ -60,7 +67,7 @@ class BCLightboxModal {
 			document.body.appendChild(modalContainer);
 
 			// Initialize the Bootstrap Modal
-			const modal =  new Modal(modalContainer, {});
+			const modal =  new this.bootstrap.Modal(modalContainer, {});
 			return modal;
 		}
 		return false;
@@ -70,7 +77,7 @@ class BCLightboxModal {
 	 * Transform links to open the lightbox modal and handle video embedding.
 	 *
 	 * @param {NodeList} lightboxLinks - The links that will trigger the lightbox.
-	 * @param {Modal} modal - The Bootstrap Modal instance.
+	 * @param {this.bootstrap.Modal} modal - The Bootstrap Modal instance.
 	 * @return {void}
 	 */
 	transformLinksToLightbox( lightboxLinks, modal ) {
